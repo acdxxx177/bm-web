@@ -64,6 +64,7 @@ export const useQuizStore = defineStore('quiz', () => {
   const quizFinished = ref<boolean>(false);
   const userAnswer = ref<string | boolean | string[] | null>(null);
   const showAnswer = ref<boolean>(false);
+  const isRetrying = ref<boolean>(false);
 
   /**
    * @computed {Question | undefined} currentQuestion - 返回当前题目对象。
@@ -95,7 +96,7 @@ export const useQuizStore = defineStore('quiz', () => {
    * @param {number} questionCount - 要加载的题目数量。
    * @returns {Promise<void>}
    */
-  async function loadQuestions(questionCount: number): Promise<void> {
+  async function loadQuestions(counts: { fillInTheBlank: number; trueFalse: number }): Promise<void> {
     try {
       const trueFalseQuestionsModule = await import('../assets/question/判断题.json');
       const fillInTheBlanksQuestionsModule = await import('../assets/question/填空题.json');
@@ -103,14 +104,26 @@ export const useQuizStore = defineStore('quiz', () => {
       const trueFalseQuestions: TrueFalseQuestion[] = trueFalseQuestionsModule.default;
       const fillInTheBlanksQuestions: FillInTheBlanksQuestion[] = fillInTheBlanksQuestionsModule.default;
 
-      const allQuestions: Question[] = [
-        ...trueFalseQuestions.map(q => ({ ...q, type: QuestionType.TrueFalse })),
-        ...fillInTheBlanksQuestions.map(q => ({ ...q, type: QuestionType.FillInTheBlanks })),
-      ];
+      const selectedQuestions: Question[] = [];
 
-      // 随机打乱题目
-      const shuffledQuestions = allQuestions.sort(() => Math.random() - 0.5);
-      questions.value = shuffledQuestions.slice(0, questionCount);
+      // Load specified number of true/false questions
+      if (counts.trueFalse > 0) {
+        const shuffledTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5);
+        selectedQuestions.push(
+          ...shuffledTrueFalse.slice(0, counts.trueFalse).map(q => ({ ...q, type: QuestionType.TrueFalse }))
+        );
+      }
+
+      // Load specified number of fill-in-the-blanks questions
+      if (counts.fillInTheBlank > 0) {
+        const shuffledFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5);
+        selectedQuestions.push(
+          ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map(q => ({ ...q, type: QuestionType.FillInTheBlanks }))
+        );
+      }
+
+      // Shuffle all selected questions
+      questions.value = selectedQuestions.sort(() => Math.random() - 0.5);
     } catch (error) {
       console.error('Failed to load questions:', error);
     }
@@ -136,7 +149,7 @@ export const useQuizStore = defineStore('quiz', () => {
    * @param {string | boolean | string[]} answer - 用户提交的答案。
    * @returns {void}
    */
-  function submitAnswer(answer: string | boolean | string[]): void {
+  function submitAnswer(answer: string | boolean | string[], isRetryAttempt: boolean = false): void {
     userAnswer.value = answer;
     showAnswer.value = true;
 
@@ -162,7 +175,7 @@ export const useQuizStore = defineStore('quiz', () => {
       }
     }
 
-    if (isCorrect) {
+    if (isCorrect && !isRetryAttempt) {
       correctAnswersCount.value++;
     }
   }
@@ -176,6 +189,7 @@ export const useQuizStore = defineStore('quiz', () => {
     console.log('nextQuestion called');
     showAnswer.value = false;
     userAnswer.value = null;
+    isRetrying.value = false; // Reset retry state
     if (currentQuestionIndex.value < questions.value.length - 1) {
       currentQuestionIndex.value++;
       console.log('currentQuestionIndex:', currentQuestionIndex.value);
@@ -198,6 +212,17 @@ export const useQuizStore = defineStore('quiz', () => {
     quizFinished.value = false;
     userAnswer.value = null;
     showAnswer.value = false;
+    isRetrying.value = false; // Reset retry state
+  }
+
+  /**
+   * @function setRetrying
+   * @description 设置是否处于重试状态。
+   * @param {boolean} value - 是否重试。
+   * @returns {void}
+   */
+  function setRetrying(value: boolean): void {
+    isRetrying.value = value;
   }
 
   return {
@@ -208,6 +233,7 @@ export const useQuizStore = defineStore('quiz', () => {
     quizFinished,
     userAnswer,
     showAnswer,
+    isRetrying,
     currentQuestion,
     totalQuestions,
     percentageCorrect,
@@ -216,5 +242,6 @@ export const useQuizStore = defineStore('quiz', () => {
     submitAnswer,
     nextQuestion,
     resetQuiz,
+    setRetrying,
   };
 });

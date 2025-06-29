@@ -50,12 +50,22 @@
         <div v-if="quizStore.showAnswer" class="mt-8 p-6 rounded-lg border-l-4" :class="isAnswerCorrect ? 'bg-green-50 border-green-500 text-green-800' : 'bg-red-50 border-red-500 text-red-800'">
           <p class="text-lg font-semibold mb-2">你的答案: <span class="font-normal">{{ displayUserAnswer }}</span></p>
           <p class="text-lg font-semibold">正确答案: <span class="font-normal">{{ displayCorrectAnswer }}</span></p>
-          <button
-            @click="nextQuestionHandler"
-            class="mt-6 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full transform transition-all duration-200 active:scale-95"
-          >
-            下一题
-          </button>
+          <div class="mt-6 flex flex-col sm:flex-row gap-4">
+            <button
+              v-if="!isAnswerCorrect"
+              @click="retryQuestion"
+              class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95"
+            >
+              再试一次
+            </button>
+            <button
+              @click="nextQuestionHandler"
+              class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95"
+              :class="{'sm:w-full': isAnswerCorrect}"
+            >
+              下一题
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -240,11 +250,23 @@ function submitAnswerHandler(): void {
 
   if (question.type === '判断题') {
     if (userAnswer.value !== null) {
-      quizStore.submitAnswer(userAnswer.value);
+      quizStore.submitAnswer(userAnswer.value, quizStore.isRetrying);
     }
   } else if (question.type === '填空题') {
-    quizStore.submitAnswer(fillInTheBlanksUserAnswers.value);
+    quizStore.submitAnswer(fillInTheBlanksUserAnswers.value, quizStore.isRetrying);
   }
+}
+
+/**
+ * @function retryQuestion
+ * @description 处理重新答题。
+ * @returns {void}
+ */
+function retryQuestion(): void {
+  userAnswer.value = null; // 重置判断题用户答案
+  fillInTheBlanksUserAnswers.value = []; // 重置填空题用户答案
+  quizStore.showAnswer = false; // 隐藏答案
+  quizStore.setRetrying(true); // 设置为重试状态
 }
 
 /**
@@ -281,6 +303,7 @@ async function resetAndGoHome(): Promise<void> {
 watch(() => quizStore.currentQuestion, (newQuestion) => {
   userAnswer.value = null;
   fillInTheBlanksUserAnswers.value = []; // Reset for all types
+  quizStore.setRetrying(false); // Reset retry state when question changes
 
   if (newQuestion?.type === '填空题') {
     const blanksCount = (newQuestion.question.match(/__/g) || []).length;

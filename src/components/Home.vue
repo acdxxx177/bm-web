@@ -5,14 +5,25 @@
     </h1>
     <div class="bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105">
       <div class="mb-8">
-        <label for="question-count" class="block text-gray-800 text-lg font-semibold mb-3">选择题目数量:</label>
+        <label for="fill-in-the-blank-count" class="block text-gray-800 text-lg font-semibold mb-3">填空题数量:</label>
         <input
-          id="question-count"
+          id="fill-in-the-blank-count"
           type="number"
-          v-model.number="questionCount"
-          min="1"
+          v-model.number="fillInTheBlankCount"
+          min="0"
           class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          placeholder="请输入题目数量"
+          placeholder="请输入填空题数量"
+        />
+      </div>
+      <div class="mb-8">
+        <label for="true-false-count" class="block text-gray-800 text-lg font-semibold mb-3">判断题数量:</label>
+        <input
+          id="true-false-count"
+          type="number"
+          v-model.number="trueFalseCount"
+          min="0"
+          class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          placeholder="请输入判断题数量"
         />
       </div>
       <button
@@ -31,9 +42,14 @@ import { useRouter } from 'vue-router';
 import { useQuizStore } from '../stores/quiz';
 
 /**
- * @property {number} questionCount - 用户选择的题目数量。
+ * @property {number} fillInTheBlankCount - 用户选择的填空题数量。
  */
-const questionCount = ref<number>(10);
+const fillInTheBlankCount = ref<number>(5);
+
+/**
+ * @property {number} trueFalseCount - 用户选择的判断题数量。
+ */
+const trueFalseCount = ref<number>(5);
 
 /**
  * @property {object} quizStore - Quiz Store 实例。
@@ -51,10 +67,14 @@ const router = useRouter();
  * @returns {Promise<void>}
  */
 async function startQuizHandler(): Promise<void> {
-  if (questionCount.value > 0) {
-    await quizStore.loadQuestions(questionCount.value);
+  const totalQuestions = fillInTheBlankCount.value + trueFalseCount.value;
+  if (totalQuestions > 0) {
+    await quizStore.loadQuestions({
+      fillInTheBlank: fillInTheBlankCount.value,
+      trueFalse: trueFalseCount.value,
+    });
     quizStore.startQuiz();
-    await router.push({ name: 'Quiz', params: { count: questionCount.value.toString() } });
+    await router.push({ name: 'Quiz', params: { count: totalQuestions.toString() } });
   }
 }
 </script>

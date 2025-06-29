@@ -16,6 +16,10 @@ interface TrueFalseQuestion {
    * @property {boolean} answer - 正确答案 (true/false)。
    */
   answer: boolean;
+  /**
+   * @property {string} type - 题目类型。
+   */
+  type: '判断题';
 }
 
 /**
@@ -31,6 +35,10 @@ interface FillInTheBlanksQuestion {
  * @property {string[]} answer - 填空题的正确答案，每个空对应一个字符串。
  */
   answer: string[];
+  /**
+   * @property {string} type - 题目类型。
+   */
+  type: '填空题';
 }
 
 /**
@@ -50,6 +58,10 @@ interface SingleChoiceQuestion {
    * @property {string} answer - 正确选项的文本内容。
    */
   answer: string;
+  /**
+   * @property {string} type - 题目类型。
+   */
+  type: '单选题';
 }
 
 /**
@@ -69,6 +81,10 @@ interface MultipleChoiceQuestion {
    * @property {string[]} answer - 正确选项的文本内容数组。
    */
   answer: string[];
+  /**
+   * @property {string} type - 题目类型。
+   */
+  type: '多选题';
 }
 
 /**
@@ -84,6 +100,10 @@ interface ShortAnswerQuestion {
    * @property {string} answer - 简答题的参考答案。
    */
   answer: string;
+  /**
+   * @property {string} type - 题目类型。
+   */
+  type: '简答题';
 }
 
 /**
