@@ -1,71 +1,68 @@
 <template>
-  <div class="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-4 sm:p-6 lg:p-8">
-    <div v-if="quizStore.quizStarted && !quizStore.quizFinished" class="bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-3xl transform transition-all duration-300 hover:scale-[1.01]">
-      <div v-if="quizStore.isInfiniteMode" class="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+  <div
+    class="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-4 sm:p-6 lg:p-8">
+    <div v-if="quizStore.quizStarted && !quizStore.quizFinished"
+      class="bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-3xl transform transition-all duration-300 hover:scale-[1.01]">
+      <div v-if="quizStore.isInfiniteMode"
+        class="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
         正确率: {{ quizStore.percentageCorrect.toFixed(0) }}%
       </div>
       <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 text-center">
         题目 {{ quizStore.currentQuestionIndex + 1 }} / {{ quizStore.totalQuestions }}
       </h2>
       <div v-if="quizStore.currentQuestion" class="mb-8">
-        <p v-if="quizStore.currentQuestion.type !== '填空题'" class="text-xl sm:text-2xl text-gray-800 mb-6 leading-relaxed">{{ quizStore.currentQuestion.question }}</p>
+        <p v-if="quizStore.currentQuestion.type !== '填空题'"
+          class="text-xl sm:text-2xl text-gray-800 mb-6 leading-relaxed">{{ quizStore.currentQuestion.question }}</p>
 
         <!-- 判断题 -->
         <div v-if="quizStore.currentQuestion.type === '判断题'" class="space-y-4">
-          <label class="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200"
-            :class="{'bg-blue-50 border-blue-500': userAnswer === true && !quizStore.showAnswer, 'bg-green-100 border-green-500': quizStore.showAnswer && quizStore.currentQuestion.answer === true, 'bg-red-100 border-red-500': quizStore.showAnswer && quizStore.currentQuestion.answer === false && userAnswer === true}">
-            <input type="radio" :value="true" v-model="userAnswer" :disabled="quizStore.showAnswer" class="form-radio h-5 w-5 text-blue-600 mr-3">
+          <label
+            class="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+            :class="{ 'bg-blue-50 border-blue-500': userAnswer === true && !quizStore.showAnswer, 'bg-green-100 border-green-500': quizStore.showAnswer && quizStore.currentQuestion.answer === true, 'bg-red-100 border-red-500': quizStore.showAnswer && quizStore.currentQuestion.answer === false && userAnswer === true }">
+            <input type="radio" :value="true" v-model="userAnswer" :disabled="quizStore.showAnswer"
+              class="form-radio h-5 w-5 text-blue-600 mr-3">
             <span class="text-lg text-gray-800">正确</span>
           </label>
-          <label class="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200"
-            :class="{'bg-blue-50 border-blue-500': userAnswer === false && !quizStore.showAnswer, 'bg-green-100 border-green-500': quizStore.showAnswer && quizStore.currentQuestion.answer === false, 'bg-red-100 border-red-500': quizStore.showAnswer && quizStore.currentQuestion.answer === true && userAnswer === false}">
-            <input type="radio" :value="false" v-model="userAnswer" :disabled="quizStore.showAnswer" class="form-radio h-5 w-5 text-blue-600 mr-3">
+          <label
+            class="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+            :class="{ 'bg-blue-50 border-blue-500': userAnswer === false && !quizStore.showAnswer, 'bg-green-100 border-green-500': quizStore.showAnswer && quizStore.currentQuestion.answer === false, 'bg-red-100 border-red-500': quizStore.showAnswer && quizStore.currentQuestion.answer === true && userAnswer === false }">
+            <input type="radio" :value="false" v-model="userAnswer" :disabled="quizStore.showAnswer"
+              class="form-radio h-5 w-5 text-blue-600 mr-3">
             <span class="text-lg text-gray-800">错误</span>
           </label>
         </div>
 
         <!-- 填空题 -->
-        <div v-else-if="quizStore.currentQuestion.type === '填空题'" class="flex flex-wrap items-center gap-x-2 gap-y-4 text-xl sm:text-2xl text-gray-800 leading-relaxed">
+        <div v-else-if="quizStore.currentQuestion.type === '填空题'"
+          class="text-xl sm:text-2xl text-gray-800 leading-relaxed">
           <template v-for="(part, index) in parsedFillInTheBlanksQuestion" :key="index">
             <span v-if="part.type === 'text'">{{ part.value }}</span>
-            <input
-              v-else
-              type="text"
-              v-model="fillInTheBlanksUserAnswers[part.index!]"
-              :disabled="quizStore.showAnswer"
+            <input v-else type="text" v-model="fillInTheBlanksUserAnswers[part.index!]" :disabled="quizStore.showAnswer"
               :size="expectedFillInTheBlanksAnswerLengths[part.index!] || 10"
-              class="inline-block min-w-[80px] max-w-full shadow-inner appearance-none border border-gray-300 rounded-lg py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              placeholder="填写"
-            />
+              class="inline-block min-w-[80px] max-w-full shadow-inner appearance-none border border-gray-300 rounded-lg py-2 px-3 text-gray-800 leading-tight focus:ring-2 focus:ring-blue-500 transition-all duration-200 align-middle"
+              placeholder="填写" />
           </template>
         </div>
 
         <!-- 其他题型待实现 -->
 
-        <button
-          @click="submitAnswerHandler"
-          :disabled="quizStore.showAnswer || !canSubmitAnswer"
-          class="mt-8 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 w-full transform transition-all duration-200 active:scale-95"
-        >
+        <button v-if="!quizStore.showAnswer" @click="submitAnswerHandler" :disabled="!canSubmitAnswer"
+          class="mt-8 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 w-full transform transition-all duration-200 active:scale-95">
           提交答案
         </button>
 
-        <div v-if="quizStore.showAnswer" class="mt-8 p-6 rounded-lg border-l-4" :class="isAnswerCorrect ? 'bg-green-50 border-green-500 text-green-800' : 'bg-red-50 border-red-500 text-red-800'">
+        <div v-if="quizStore.showAnswer" class="mt-8 p-6 rounded-lg border-l-4"
+          :class="isAnswerCorrect ? 'bg-green-50 border-green-500 text-green-800' : 'bg-red-50 border-red-500 text-red-800'">
           <p class="text-lg font-semibold mb-2">你的答案: <span class="font-normal">{{ displayUserAnswer }}</span></p>
           <p class="text-lg font-semibold">正确答案: <span class="font-normal">{{ displayCorrectAnswer }}</span></p>
           <div class="mt-6 flex flex-col sm:flex-row gap-4">
-            <button
-              v-if="!isAnswerCorrect"
-              @click="retryQuestion"
-              class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95"
-            >
+            <button v-if="!isAnswerCorrect" @click="retryQuestion"
+              class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95">
               再试一次
             </button>
-            <button
-              @click="nextQuestionHandler"
+            <button @click="nextQuestionHandler"
               class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95"
-              :class="{'sm:w-full': isAnswerCorrect}"
-            >
+              :class="{ 'sm:w-full': isAnswerCorrect }">
               下一题
             </button>
           </div>
@@ -73,30 +70,28 @@
       </div>
     </div>
 
-    <div v-else-if="quizStore.quizFinished && !quizStore.isInfiniteMode" class="text-center bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md">
+    <div v-else-if="quizStore.quizFinished && !quizStore.isInfiniteMode"
+      class="text-center bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md">
       <h2 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-6">测验结束！</h2>
-      <p class="text-2xl text-gray-800 mb-3">你的得分: <span class="font-bold">{{ quizStore.correctAnswersCount }}</span> / <span class="font-bold">{{ quizStore.totalQuestions }}</span></p>
-      <p class="text-2xl text-gray-800 mb-8">正确率: <span class="font-bold text-green-600">{{ quizStore.percentageCorrect.toFixed(2) }}%</span></p>
-      <button
-        @click="goToStatistics"
-        class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 w-full transform transition-all duration-200 active:scale-95"
-      >
+      <p class="text-2xl text-gray-800 mb-3">你的得分: <span class="font-bold">{{ quizStore.correctAnswersCount }}</span> /
+        <span class="font-bold">{{ quizStore.totalQuestions }}</span>
+      </p>
+      <p class="text-2xl text-gray-800 mb-8">正确率: <span class="font-bold text-green-600">{{
+        quizStore.percentageCorrect.toFixed(2) }}%</span></p>
+      <button @click="goToStatistics"
+        class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 w-full transform transition-all duration-200 active:scale-95">
         查看统计
       </button>
-      <button
-        @click="resetAndGoHome"
-        class="mt-4 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 w-full transform transition-all duration-200 active:scale-95"
-      >
+      <button @click="resetAndGoHome"
+        class="mt-4 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 w-full transform transition-all duration-200 active:scale-95">
         返回首页
       </button>
     </div>
 
     <div v-else class="text-center bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md">
       <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">测验未开始或题目加载失败。</h2>
-      <button
-        @click="resetAndGoHome"
-        class="mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full transform transition-all duration-200 active:scale-95"
-      >
+      <button @click="resetAndGoHome"
+        class="mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full transform transition-all duration-200 active:scale-95">
         返回首页
       </button>
     </div>
@@ -155,7 +150,7 @@ const canSubmitAnswer = computed<boolean>(() => {
     // 确保所有填空都已填写且不为空
     const expectedBlanks = (question.question.match(/__/g) || []).length;
     return fillInTheBlanksUserAnswers.value.length === expectedBlanks &&
-           fillInTheBlanksUserAnswers.value.every(answer => answer !== null && answer.trim() !== '');
+      fillInTheBlanksUserAnswers.value.every(answer => answer !== null && answer.trim() !== '');
   }
   return false;
 });
@@ -182,10 +177,19 @@ const parsedFillInTheBlanksQuestion = computed(() => {
 /**
  * @computed {number[]} expectedFillInTheBlanksAnswerLengths - 获取填空题每个空对应的正确答案的长度。
  */
+const MIN_INPUT_SIZE = 5; // 最小输入框宽度
+const MAX_INPUT_SIZE = 30; // 最大输入框宽度
+
+/**
+ * @computed {number[]} expectedFillInTheBlanksAnswerLengths - 获取填空题每个空对应的正确答案的长度。
+ */
 const expectedFillInTheBlanksAnswerLengths = computed(() => {
   const question = quizStore.currentQuestion;
   if (question?.type === '填空题') {
-    return (question as FillInTheBlanksQuestion).answer.map((ans: string) => ans.length);
+    return (question as FillInTheBlanksQuestion).answer.map((ans: string) => {
+      const calculatedSize = ans.length * 1.8; // 答案长度 + 2个字符的缓冲区
+      return Math.max(MIN_INPUT_SIZE, Math.min(MAX_INPUT_SIZE, calculatedSize));
+    });
   }
   return [];
 });
