@@ -1,10 +1,3 @@
-<script setup lang="ts">
-import { useQuizStore } from './stores/quiz';
-
-// 全局状态管理
-const quizStore = useQuizStore();
-</script>
-
 <template>
   <div id="app" class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <header class="bg-white dark:bg-gray-800 shadow-sm">
@@ -17,6 +10,12 @@ const quizStore = useQuizStore();
             <nav class="ml-8 flex space-x-8">
               <router-link to="/" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 首页
+              </router-link>
+              <router-link to="/quiz" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                答题
+              </router-link>
+              <router-link to="/statistics" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                统计
               </router-link>
             </nav>
           </div>
