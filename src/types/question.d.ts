@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview 定义了项目中所有题目的类型接口。
  */
@@ -7,7 +6,7 @@
  * @interface TrueFalseQuestion
  * @description 判断题接口。
  */
-interface TrueFalseQuestion {
+export interface TrueFalseQuestion {
   /**
    * @property {string} question - 题目内容。
    */
@@ -26,7 +25,7 @@ interface TrueFalseQuestion {
  * @interface FillInTheBlanksQuestion
  * @description 填空题接口。
  */
-interface FillInTheBlanksQuestion {
+export interface FillInTheBlanksQuestion {
   /**
    * @property {string} question - 题目内容，包含下划线表示填空位置。
    */
@@ -45,7 +44,7 @@ interface FillInTheBlanksQuestion {
  * @interface SingleChoiceQuestion
  * @description 单选题接口。
  */
-interface SingleChoiceQuestion {
+export interface SingleChoiceQuestion {
   /**
    * @property {string} question - 题目内容。
    */
@@ -68,7 +67,7 @@ interface SingleChoiceQuestion {
  * @interface MultipleChoiceQuestion
  * @description 多选题接口。
  */
-interface MultipleChoiceQuestion {
+export interface MultipleChoiceQuestion {
   /**
    * @property {string} question - 题目内容。
    */
@@ -91,7 +90,7 @@ interface MultipleChoiceQuestion {
  * @interface ShortAnswerQuestion
  * @description 简答题接口。
  */
-interface ShortAnswerQuestion {
+export interface ShortAnswerQuestion {
   /**
    * @property {string} question - 题目内容。
    */
@@ -110,4 +109,4 @@ interface ShortAnswerQuestion {
  * @typedef {TrueFalseQuestion | FillInTheBlanksQuestion | SingleChoiceQuestion | MultipleChoiceQuestion | ShortAnswerQuestion} Question
  * @description 所有题目类型的联合类型。
  */
-type Question = TrueFalseQuestion | FillInTheBlanksQuestion | SingleChoiceQuestion | MultipleChoiceQuestion | ShortAnswerQuestion;
+export type Question = TrueFalseQuestion | FillInTheBlanksQuestion | SingleChoiceQuestion | MultipleChoiceQuestion | ShortAnswerQuestion;

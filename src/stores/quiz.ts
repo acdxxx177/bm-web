@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { Question, TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question';
+import type { Question, TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question.d';
 
 /**
  * @constant {object} QuestionType
@@ -13,43 +13,6 @@ const QuestionType = {
   MultipleChoice: '多选题',
   ShortAnswer: '简答题',
 } as const;
-
-type QuestionType = typeof QuestionType[keyof typeof QuestionType];
-
-/**
- * @interface QuizState
- * @description Quiz Store 的状态接口。
- */
-interface QuizState {
-  /**
-   * @property {Question[]} questions - 所有加载的题目。
-   */
-  questions: Question[];
-  /**
-   * @property {number} currentQuestionIndex - 当前题目的索引。
-   */
-  currentQuestionIndex: number;
-  /**
-   * @property {number} correctAnswersCount - 正确答案的数量。
-   */
-  correctAnswersCount: number;
-  /**
-   * @property {boolean} quizStarted - 测验是否已开始。
-   */
-  quizStarted: boolean;
-  /**
-   * @property {boolean} quizFinished - 测验是否已结束。
-   */
-  quizFinished: boolean;
-  /**
-   * @property {string | boolean | string[]} userAnswer - 用户当前题目的答案。
-   */
-  userAnswer: string | boolean | string[] | null;
-  /**
-   * @property {boolean} showAnswer - 是否显示当前题目的正确答案。
-   */
-  showAnswer: boolean;
-}
 
 /**
  * @function useQuizStore
@@ -105,20 +68,20 @@ export const useQuizStore = defineStore('quiz', () => {
       const trueFalseQuestionsModule = await import('../assets/question/判断题.json');
       const fillInTheBlanksQuestionsModule = await import('../assets/question/填空题.json');
 
-      const trueFalseQuestions: TrueFalseQuestion[] = trueFalseQuestionsModule.default;
-      const fillInTheBlanksQuestions: FillInTheBlanksQuestion[] = fillInTheBlanksQuestionsModule.default;
+      const trueFalseQuestions: TrueFalseQuestion[] = trueFalseQuestionsModule.default.map((q: Omit<TrueFalseQuestion, 'type'>) => ({ ...q, type: QuestionType.TrueFalse }));
+      const fillInTheBlanksQuestions: FillInTheBlanksQuestion[] = fillInTheBlanksQuestionsModule.default.map((q: Omit<FillInTheBlanksQuestion, 'type'>) => ({ ...q, type: QuestionType.FillInTheBlanks }));
 
       allAvailableQuestions.value = [
-        ...trueFalseQuestions.map(q => ({ ...q, type: QuestionType.TrueFalse })),
-        ...fillInTheBlanksQuestions.map(q => ({ ...q, type: QuestionType.FillInTheBlanks })),
+        ...trueFalseQuestions.map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse })),
+        ...fillInTheBlanksQuestions.map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks })),
       ];
 
       if (counts.isInfiniteMode) {
         isInfiniteMode.value = true;
         questionsToAddPerRound.value = counts.questionsToAdd || 2; // Set the new state variable
         // For infinite mode, initially select 10 questions (5 true/false, 5 fill-in-the-blanks)
-        const initialTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map(q => ({ ...q, type: QuestionType.TrueFalse }));
-        const initialFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map(q => ({ ...q, type: QuestionType.FillInTheBlanks }));
+        const initialTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse }));
+        const initialFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks }));
         questions.value = [...initialTrueFalse, ...initialFillInTheBlanks].sort(() => Math.random() - 0.5);
         questionsAddedCount.value = questions.value.length;
 
@@ -148,7 +111,7 @@ export const useQuizStore = defineStore('quiz', () => {
         if (counts.trueFalse > 0) {
           const shuffledTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5);
           selectedQuestions.push(
-            ...shuffledTrueFalse.slice(0, counts.trueFalse).map(q => ({ ...q, type: QuestionType.TrueFalse }))
+            ...shuffledTrueFalse.slice(0, counts.trueFalse).map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse }))
           );
         }
 
@@ -156,7 +119,7 @@ export const useQuizStore = defineStore('quiz', () => {
         if (counts.fillInTheBlank > 0) {
           const shuffledFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5);
           selectedQuestions.push(
-            ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map(q => ({ ...q, type: QuestionType.FillInTheBlanks }))
+            ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks }))
           );
         }
 
@@ -276,13 +239,13 @@ export const useQuizStore = defineStore('quiz', () => {
    * @returns {void}
    */
   function addNewQuestions(count: number): void {
-    const currentQuestionIds = new Set(questions.value.map(q => q.question));
+    const currentQuestionIds = new Set(questions.value.map((q: Question) => q.question));
     const newQuestionsToAdd: Question[] = [];
 
     // Filter out questions already in the current quiz and shuffle remaining
     const availableNewQuestions = allAvailableQuestions.value.filter(
-      q => !currentQuestionIds.has(q.question)
-    ).sort(() => Math.random() - 0.5).map(q => ({ ...q, type: q.type }));
+      (q: Question) => !currentQuestionIds.has(q.question)
+    ).sort(() => Math.random() - 0.5);
 
     for (let i = 0; i < count && i < availableNewQuestions.length; i++) {
       newQuestionsToAdd.push(availableNewQuestions[i]);
@@ -335,6 +298,7 @@ export const useQuizStore = defineStore('quiz', () => {
     userAnswer,
     showAnswer,
     isRetrying,
+    isInfiniteMode,
     currentQuestion,
     totalQuestions,
     percentageCorrect,

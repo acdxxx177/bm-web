@@ -31,9 +31,9 @@
             <input
               v-else
               type="text"
-              v-model="fillInTheBlanksUserAnswers[part.index]"
+              v-model="fillInTheBlanksUserAnswers[part.index!]"
               :disabled="quizStore.showAnswer"
-              :size="expectedFillInTheBlanksAnswerLengths[part.index] || 10"
+              :size="expectedFillInTheBlanksAnswerLengths[part.index!] || 10"
               class="inline-block min-w-[80px] max-w-full shadow-inner appearance-none border border-gray-300 rounded-lg py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="填写"
             />
@@ -107,7 +107,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuizStore } from '../stores/quiz';
-import type { TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question';
+import type { TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question.d';
 
 /**
  * @property {object} quizStore - Quiz Store 实例。
@@ -170,7 +170,7 @@ const parsedFillInTheBlanksQuestion = computed(() => {
   }
   const parts = question.question.split(/(__)/g);
   let inputIndex = 0;
-  return parts.map(part => {
+  return parts.map((part: string) => {
     if (part === '__') {
       return { type: 'input', value: '', index: inputIndex++ };
     } else {
@@ -185,7 +185,7 @@ const parsedFillInTheBlanksQuestion = computed(() => {
 const expectedFillInTheBlanksAnswerLengths = computed(() => {
   const question = quizStore.currentQuestion;
   if (question?.type === '填空题') {
-    return (question as FillInTheBlanksQuestion).answer.map(ans => ans.length);
+    return (question as FillInTheBlanksQuestion).answer.map((ans: string) => ans.length);
   }
   return [];
 });
@@ -202,13 +202,13 @@ const isAnswerCorrect = computed<boolean>(() => {
   if (question.type === '判断题') {
     return (userAnswer.value === (question as TrueFalseQuestion).answer);
   } else if (question.type === '填空题') {
-    const correctAnswers = (question as FillInTheBlanksQuestion).answer.map(a => a.trim().toLowerCase());
-    const userAnswers = fillInTheBlanksUserAnswers.value.map(a => a.trim().toLowerCase());
+    const correctAnswers = (question as FillInTheBlanksQuestion).answer.map((a: string) => a.trim().toLowerCase());
+    const userAnswers = fillInTheBlanksUserAnswers.value.map((a: string) => a.trim().toLowerCase());
     // 严格按照顺序匹配
     if (correctAnswers.length !== userAnswers.length) {
       return false;
     }
-    return correctAnswers.every((ca, index) => ca === userAnswers[index]);
+    return correctAnswers.every((ca: string, index: number) => ca === userAnswers[index]);
   }
   return false;
 });

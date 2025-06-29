@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { useQuizStore } from './stores/quiz';
-
-// 全局状态管理
-const quizStore = useQuizStore();
 </script>
 
 <template>
