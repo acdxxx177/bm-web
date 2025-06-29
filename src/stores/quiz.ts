@@ -65,6 +65,10 @@ export const useQuizStore = defineStore('quiz', () => {
   const userAnswer = ref<string | boolean | string[] | null>(null);
   const showAnswer = ref<boolean>(false);
   const isRetrying = ref<boolean>(false);
+  const isInfiniteMode = ref<boolean>(false);
+  const allAvailableQuestions = ref<Question[]>([]);
+  const questionsAddedCount = ref<number>(0);
+  const questionsToAddPerRound = ref<number>(2); // New state variable
 
   /**
    * @computed {Question | undefined} currentQuestion - 返回当前题目对象。
@@ -96,7 +100,7 @@ export const useQuizStore = defineStore('quiz', () => {
    * @param {number} questionCount - 要加载的题目数量。
    * @returns {Promise<void>}
    */
-  async function loadQuestions(counts: { fillInTheBlank: number; trueFalse: number }): Promise<void> {
+  async function loadQuestions(counts: { fillInTheBlank: number; trueFalse: number; isInfiniteMode?: boolean; questionsToAdd?: number }): Promise<void> {
     try {
       const trueFalseQuestionsModule = await import('../assets/question/判断题.json');
       const fillInTheBlanksQuestionsModule = await import('../assets/question/填空题.json');
@@ -104,28 +108,81 @@ export const useQuizStore = defineStore('quiz', () => {
       const trueFalseQuestions: TrueFalseQuestion[] = trueFalseQuestionsModule.default;
       const fillInTheBlanksQuestions: FillInTheBlanksQuestion[] = fillInTheBlanksQuestionsModule.default;
 
-      const selectedQuestions: Question[] = [];
+      allAvailableQuestions.value = [
+        ...trueFalseQuestions.map(q => ({ ...q, type: QuestionType.TrueFalse })),
+        ...fillInTheBlanksQuestions.map(q => ({ ...q, type: QuestionType.FillInTheBlanks })),
+      ];
 
-      // Load specified number of true/false questions
-      if (counts.trueFalse > 0) {
-        const shuffledTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5);
-        selectedQuestions.push(
-          ...shuffledTrueFalse.slice(0, counts.trueFalse).map(q => ({ ...q, type: QuestionType.TrueFalse }))
-        );
+      if (counts.isInfiniteMode) {
+        isInfiniteMode.value = true;
+        questionsToAddPerRound.value = counts.questionsToAdd || 2; // Set the new state variable
+        // For infinite mode, initially select 10 questions (5 true/false, 5 fill-in-the-blanks)
+        const initialTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map(q => ({ ...q, type: QuestionType.TrueFalse }));
+        const initialFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map(q => ({ ...q, type: QuestionType.FillInTheBlanks }));
+        questions.value = [...initialTrueFalse, ...initialFillInTheBlanks].sort(() => Math.random() - 0.5);
+        questionsAddedCount.value = questions.value.length;
+
+        // Fallback if not enough questions are loaded
+        if (questions.value.length === 0) {
+          console.warn('Not enough questions loaded for infinite mode. Generating dummy questions.');
+          for (let i = 0; i < 5; i++) {
+            questions.value.push({
+              question: `Dummy True/False Question ${i + 1}?`,
+              answer: true,
+              type: QuestionType.TrueFalse,
+            });
+            questions.value.push({
+              question: `Dummy Fill-in-the-Blanks Question ${i + 1}: __ and __`,
+              answer: [`answer${i + 1}a`, `answer${i + 1}b`],
+              type: QuestionType.FillInTheBlanks,
+            });
+          }
+          questions.value = questions.value.sort(() => Math.random() - 0.5);
+          questionsAddedCount.value = questions.value.length;
+        }
+      } else {
+        isInfiniteMode.value = false;
+        const selectedQuestions: Question[] = [];
+
+        // Load specified number of true/false questions
+        if (counts.trueFalse > 0) {
+          const shuffledTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5);
+          selectedQuestions.push(
+            ...shuffledTrueFalse.slice(0, counts.trueFalse).map(q => ({ ...q, type: QuestionType.TrueFalse }))
+          );
+        }
+
+        // Load specified number of fill-in-the-blanks questions
+        if (counts.fillInTheBlank > 0) {
+          const shuffledFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5);
+          selectedQuestions.push(
+            ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map(q => ({ ...q, type: QuestionType.FillInTheBlanks }))
+          );
+        }
+
+        // Shuffle all selected questions
+        questions.value = selectedQuestions.sort(() => Math.random() - 0.5);
       }
-
-      // Load specified number of fill-in-the-blanks questions
-      if (counts.fillInTheBlank > 0) {
-        const shuffledFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5);
-        selectedQuestions.push(
-          ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map(q => ({ ...q, type: QuestionType.FillInTheBlanks }))
-        );
+      console.log('Loaded questions:', questions.value);
+      if (questions.value.length > 0) {
+        console.log('First question type:', questions.value[0].type);
       }
-
-      // Shuffle all selected questions
-      questions.value = selectedQuestions.sort(() => Math.random() - 0.5);
     } catch (error) {
       console.error('Failed to load questions:', error);
+      // Fallback for load error
+      questions.value = [
+        {
+          question: 'Error loading questions. Dummy True/False Question 1?',
+          answer: true,
+          type: QuestionType.TrueFalse,
+        },
+        {
+          question: 'Error loading questions. Dummy Fill-in-the-Blanks Question 1: __ and __',
+          answer: ['dummy1', 'dummy2'],
+          type: QuestionType.FillInTheBlanks,
+        },
+      ];
+      console.log('Loaded dummy questions due to error:', questions.value);
     }
   }
 
@@ -194,8 +251,49 @@ export const useQuizStore = defineStore('quiz', () => {
       currentQuestionIndex.value++;
       console.log('currentQuestionIndex:', currentQuestionIndex.value);
     } else {
-      quizFinished.value = true;
+      if (isInfiniteMode.value) {
+        // Check accuracy and add new questions if needed
+        if (percentageCorrect.value >= 90) {
+          addNewQuestions(questionsToAddPerRound.value); // Use the stored value
+        }
+        // Reset for the next loop
+        currentQuestionIndex.value = 0;
+        correctAnswersCount.value = 0;
+        quizFinished.value = false; // Ensure quiz is not marked as finished
+        // Shuffle questions for the next round
+        questions.value = questions.value.sort(() => Math.random() - 0.5);
+      } else {
+        quizFinished.value = true;
+      }
       console.log('quizFinished:', quizFinished.value);
+    }
+  }
+
+  /**
+   * @function addNewQuestions
+   * @description 在无限循环模式下，根据正确率增加新题目。
+   * @param {number} count - 要增加的题目数量。
+   * @returns {void}
+   */
+  function addNewQuestions(count: number): void {
+    const currentQuestionIds = new Set(questions.value.map(q => q.question));
+    const newQuestionsToAdd: Question[] = [];
+
+    // Filter out questions already in the current quiz and shuffle remaining
+    const availableNewQuestions = allAvailableQuestions.value.filter(
+      q => !currentQuestionIds.has(q.question)
+    ).sort(() => Math.random() - 0.5).map(q => ({ ...q, type: q.type }));
+
+    for (let i = 0; i < count && i < availableNewQuestions.length; i++) {
+      newQuestionsToAdd.push(availableNewQuestions[i]);
+    }
+
+    if (newQuestionsToAdd.length > 0) {
+      questions.value.push(...newQuestionsToAdd);
+      questionsAddedCount.value += newQuestionsToAdd.length;
+      console.log(`Added ${newQuestionsToAdd.length} new questions. Total questions: ${questions.value.length}`);
+    } else {
+      console.log('No new questions to add.');
     }
   }
 
@@ -213,6 +311,9 @@ export const useQuizStore = defineStore('quiz', () => {
     userAnswer.value = null;
     showAnswer.value = false;
     isRetrying.value = false; // Reset retry state
+    isInfiniteMode.value = false;
+    allAvailableQuestions.value = [];
+    questionsAddedCount.value = 0;
   }
 
   /**
@@ -243,5 +344,6 @@ export const useQuizStore = defineStore('quiz', () => {
     nextQuestion,
     resetQuiz,
     setRetrying,
+    questionsToAddPerRound,
   };
 });

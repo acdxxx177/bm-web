@@ -22,8 +22,31 @@
           type="number"
           v-model.number="trueFalseCount"
           min="0"
+          :disabled="isInfiniteMode"
           class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
           placeholder="请输入判断题数量"
+        />
+      </div>
+
+      <div class="mb-8 flex items-center">
+        <input
+          id="infinite-mode"
+          type="checkbox"
+          v-model="isInfiniteMode"
+          class="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+        />
+        <label for="infinite-mode" class="ml-2 block text-gray-800 text-lg font-semibold">无限循环模式</label>
+      </div>
+
+      <div v-if="isInfiniteMode" class="mb-8">
+        <label for="questions-to-add" class="block text-gray-800 text-lg font-semibold mb-3">每次增加题目数量:</label>
+        <input
+          id="questions-to-add"
+          type="number"
+          v-model.number="questionsToAddCount"
+          min="1"
+          class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          placeholder="请输入每次增加的题目数量"
         />
       </div>
       <button
@@ -52,6 +75,16 @@ const fillInTheBlankCount = ref<number>(5);
 const trueFalseCount = ref<number>(5);
 
 /**
+ * @property {boolean} isInfiniteMode - 是否启用无限循环模式。
+ */
+const isInfiniteMode = ref<boolean>(false);
+
+/**
+ * @property {number} questionsToAddCount - 无限循环模式下每次增加的题目数量。
+ */
+const questionsToAddCount = ref<number>(2);
+
+/**
  * @property {object} quizStore - Quiz Store 实例。
  */
 const quizStore = useQuizStore();
@@ -67,11 +100,19 @@ const router = useRouter();
  * @returns {Promise<void>}
  */
 async function startQuizHandler(): Promise<void> {
-  const totalQuestions = fillInTheBlankCount.value + trueFalseCount.value;
+  let totalQuestions = 0;
+  if (isInfiniteMode.value) {
+    totalQuestions = 10; // Infinite mode starts with 10 questions
+  } else {
+    totalQuestions = fillInTheBlankCount.value + trueFalseCount.value;
+  }
+
   if (totalQuestions > 0) {
     await quizStore.loadQuestions({
-      fillInTheBlank: fillInTheBlankCount.value,
-      trueFalse: trueFalseCount.value,
+      fillInTheBlank: isInfiniteMode.value ? 5 : fillInTheBlankCount.value,
+      trueFalse: isInfiniteMode.value ? 5 : trueFalseCount.value,
+      isInfiniteMode: isInfiniteMode.value,
+      questionsToAdd: questionsToAddCount.value, // Pass the new value
     });
     quizStore.startQuiz();
     await router.push({ name: 'Quiz', params: { count: totalQuestions.toString() } });

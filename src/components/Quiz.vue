@@ -1,6 +1,9 @@
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-4 sm:p-6 lg:p-8">
+  <div class="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-4 sm:p-6 lg:p-8">
     <div v-if="quizStore.quizStarted && !quizStore.quizFinished" class="bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-3xl transform transition-all duration-300 hover:scale-[1.01]">
+      <div v-if="quizStore.isInfiniteMode" class="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+        正确率: {{ quizStore.percentageCorrect.toFixed(0) }}%
+      </div>
       <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 text-center">
         题目 {{ quizStore.currentQuestionIndex + 1 }} / {{ quizStore.totalQuestions }}
       </h2>
@@ -70,7 +73,7 @@
       </div>
     </div>
 
-    <div v-else-if="quizStore.quizFinished" class="text-center bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md">
+    <div v-else-if="quizStore.quizFinished && !quizStore.isInfiniteMode" class="text-center bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md">
       <h2 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-6">测验结束！</h2>
       <p class="text-2xl text-gray-800 mb-3">你的得分: <span class="font-bold">{{ quizStore.correctAnswersCount }}</span> / <span class="font-bold">{{ quizStore.totalQuestions }}</span></p>
       <p class="text-2xl text-gray-800 mb-8">正确率: <span class="font-bold text-green-600">{{ quizStore.percentageCorrect.toFixed(2) }}%</span></p>
@@ -101,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuizStore } from '../stores/quiz';
 import type { TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question';
@@ -125,6 +128,13 @@ const userAnswer = ref<string | boolean | string[] | null>(null);
  * @property {string[]} fillInTheBlanksUserAnswers - 用户对填空题每个空的答案。
  */
 const fillInTheBlanksUserAnswers = ref<string[]>([]);
+
+onMounted(() => {
+  console.log('Quiz.vue mounted. Current question:', quizStore.currentQuestion);
+  if (quizStore.currentQuestion) {
+    console.log('Current question type:', quizStore.currentQuestion.type);
+  }
+});
 
 /**
  * @computed {boolean} canSubmitAnswer - 判断是否可以提交答案。
