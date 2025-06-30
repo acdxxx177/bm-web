@@ -32,6 +32,7 @@ export const useQuizStore = defineStore('quiz', () => {
   const allAvailableQuestions = ref<Question[]>([]);
   const questionsAddedCount = ref<number>(0);
   const questionsToAddPerRound = ref<number>(2); // New state variable
+  const allowedQuestionTypes = ref<string[]>([]);
 
   /**
    * @computed {Question | undefined} currentQuestion - 返回当前题目对象。
@@ -102,6 +103,17 @@ export const useQuizStore = defineStore('quiz', () => {
       // Shuffle all selected questions
       questions.value = selectedQuestions.sort(() => Math.random() - 0.5);
       questionsAddedCount.value = questions.value.length;
+
+      // Set allowed question types for infinite mode
+      if (isInfiniteMode.value) {
+        allowedQuestionTypes.value = [];
+        if (counts.trueFalse > 0) {
+          allowedQuestionTypes.value.push(QuestionType.TrueFalse);
+        }
+        if (counts.fillInTheBlank > 0) {
+          allowedQuestionTypes.value.push(QuestionType.FillInTheBlanks);
+        }
+      }
 
       // Fallback if not enough questions are loaded
       if (questions.value.length === 0 && (counts.trueFalse > 0 || counts.fillInTheBlank > 0)) {
@@ -239,9 +251,11 @@ export const useQuizStore = defineStore('quiz', () => {
     const currentQuestionIds = new Set(questions.value.map((q: Question) => q.question));
     const newQuestionsToAdd: Question[] = [];
 
-    // Filter out questions already in the current quiz and shuffle remaining
+    // Filter out questions already in the current quiz and of allowed types, then shuffle
     const availableNewQuestions = allAvailableQuestions.value.filter(
-      (q: Question) => !currentQuestionIds.has(q.question)
+      (q: Question) => 
+        !currentQuestionIds.has(q.question) && 
+        allowedQuestionTypes.value.includes(q.type)
     ).sort(() => Math.random() - 0.5);
 
     for (let i = 0; i < count && i < availableNewQuestions.length; i++) {
@@ -274,6 +288,7 @@ export const useQuizStore = defineStore('quiz', () => {
     isInfiniteMode.value = false;
     allAvailableQuestions.value = [];
     questionsAddedCount.value = 0;
+    allowedQuestionTypes.value = [];
   }
 
   /**
@@ -306,5 +321,6 @@ export const useQuizStore = defineStore('quiz', () => {
     resetQuiz,
     setRetrying,
     questionsToAddPerRound,
+    allowedQuestionTypes,
   };
 });
