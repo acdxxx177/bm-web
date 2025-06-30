@@ -57,7 +57,7 @@
           <p class="text-lg font-semibold mb-2">你的答案: <span class="font-normal">{{ displayUserAnswer }}</span></p>
           <p class="text-lg font-semibold">正确答案: <span class="font-normal">{{ displayCorrectAnswer }}</span></p>
           <div class="mt-6 flex flex-col sm:flex-row gap-4">
-            <button v-if="!isAnswerCorrect" @click="retryQuestion"
+            <button type="button" v-if="!isAnswerCorrect" @click="retryQuestion" ref="retryButton"
               class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95">
               再试一次
             </button>
@@ -145,10 +145,18 @@ onUnmounted(() => {
  */
 function handleKeyPress(event: KeyboardEvent): void {
   if (event.key === 'Enter') {
+    event.preventDefault();
+
     if (quizStore.showAnswer) {
-      nextQuestionHandler();
+      if (isAnswerCorrect.value) {
+        nextQuestionHandler();
+      } else {
+        retryQuestion();
+      }
     } else {
-      submitAnswerHandler();
+      if (canSubmitAnswer.value) {
+        submitAnswerHandler();
+      }
     }
   }
 }
@@ -291,18 +299,35 @@ function submitAnswerHandler(): void {
   } else if (question.type === '填空题') {
     quizStore.submitAnswer(fillInTheBlanksUserAnswers.value, quizStore.isRetrying);
   }
-}
+
+  if (!isAnswerCorrect.value) {
+    nextTick(() => {
+      retryButton.value?.focus();
+    });
+  }
+}""
 
 /**
  * @function retryQuestion
  * @description 处理重新答题。
  * @returns {void}
  */
-function retryQuestion(): void {
+async function retryQuestion(): Promise<void> {
   userAnswer.value = null; // 重置判断题用户答案
   fillInTheBlanksUserAnswers.value = []; // 重置填空题用户答案
   quizStore.showAnswer = false; // 隐藏答案
   quizStore.setRetrying(true); // 设置为重试状态
+
+  // 如果是填空题，则在UI更新后聚焦到第一个输入框
+  if (quizStore.currentQuestion?.type === '填空题') {
+    const blanksCount = (quizStore.currentQuestion.question.match(/__/g) || []).length;
+    fillInTheBlanksUserAnswers.value = Array(blanksCount).fill('');
+    await nextTick();
+    const firstInput = fillInTheBlanksInputs.value[0];
+    if (firstInput) {
+      firstInput.focus();
+    }
+  }
 }
 
 /**
@@ -335,6 +360,7 @@ async function resetAndGoHome(): Promise<void> {
   await router.push({ name: 'Home' });
 }
 
+const retryButton = ref<HTMLButtonElement | null>(null);
 const fillInTheBlanksInputs = ref<(HTMLInputElement | null)[]>([]);
 
 // 监听当前题目变化，重置用户答案并初始化填空题答案数组
