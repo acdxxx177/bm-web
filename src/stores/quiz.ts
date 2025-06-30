@@ -76,55 +76,52 @@ export const useQuizStore = defineStore('quiz', () => {
         ...fillInTheBlanksQuestions.map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks })),
       ];
 
+      isInfiniteMode.value = counts.isInfiniteMode ?? false;
       if (counts.isInfiniteMode) {
-        isInfiniteMode.value = true;
         questionsToAddPerRound.value = counts.questionsToAdd || 2; // Set the new state variable
-        // For infinite mode, initially select 10 questions (5 true/false, 5 fill-in-the-blanks)
-        const initialTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse }));
-        const initialFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5).slice(0, 5).map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks }));
-        questions.value = [...initialTrueFalse, ...initialFillInTheBlanks].sort(() => Math.random() - 0.5);
-        questionsAddedCount.value = questions.value.length;
+      }
 
-        // Fallback if not enough questions are loaded
-        if (questions.value.length === 0) {
-          console.warn('Not enough questions loaded for infinite mode. Generating dummy questions.');
-          for (let i = 0; i < 5; i++) {
-            questions.value.push({
-              question: `Dummy True/False Question ${i + 1}?`,
-              answer: true,
-              type: QuestionType.TrueFalse,
-            });
-            questions.value.push({
-              question: `Dummy Fill-in-the-Blanks Question ${i + 1}: __ and __`,
-              answer: [`answer${i + 1}a`, `answer${i + 1}b`],
-              type: QuestionType.FillInTheBlanks,
-            });
-          }
-          questions.value = questions.value.sort(() => Math.random() - 0.5);
-          questionsAddedCount.value = questions.value.length;
-        }
-      } else {
-        isInfiniteMode.value = false;
-        const selectedQuestions: Question[] = [];
+      const selectedQuestions: Question[] = [];
 
-        // Load specified number of true/false questions
+      // Load specified number of true/false questions
+      if (counts.trueFalse > 0) {
+        const shuffledTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5);
+        selectedQuestions.push(
+          ...shuffledTrueFalse.slice(0, counts.trueFalse).map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse }))
+        );
+      }
+
+      // Load specified number of fill-in-the-blanks questions
+      if (counts.fillInTheBlank > 0) {
+        const shuffledFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5);
+        selectedQuestions.push(
+          ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks }))
+        );
+      }
+
+      // Shuffle all selected questions
+      questions.value = selectedQuestions.sort(() => Math.random() - 0.5);
+      questionsAddedCount.value = questions.value.length;
+
+      // Fallback if not enough questions are loaded
+      if (questions.value.length === 0 && (counts.trueFalse > 0 || counts.fillInTheBlank > 0)) {
+        console.warn('Not enough questions loaded. Generating dummy questions.');
         if (counts.trueFalse > 0) {
-          const shuffledTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5);
-          selectedQuestions.push(
-            ...shuffledTrueFalse.slice(0, counts.trueFalse).map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse }))
-          );
+          questions.value.push({
+            question: `Dummy True/False Question 1?`,
+            answer: true,
+            type: QuestionType.TrueFalse,
+          });
         }
-
-        // Load specified number of fill-in-the-blanks questions
         if (counts.fillInTheBlank > 0) {
-          const shuffledFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5);
-          selectedQuestions.push(
-            ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks }))
-          );
+          questions.value.push({
+            question: `Dummy Fill-in-the-Blanks Question 1: __ and __`,
+            answer: [`answer1a`, `answer1b`],
+            type: QuestionType.FillInTheBlanks,
+          });
         }
-
-        // Shuffle all selected questions
-        questions.value = selectedQuestions.sort(() => Math.random() - 0.5);
+        questions.value = questions.value.sort(() => Math.random() - 0.5);
+        questionsAddedCount.value = questions.value.length;
       }
       console.log('Loaded questions:', questions.value);
       if (questions.value.length > 0) {

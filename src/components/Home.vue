@@ -22,7 +22,6 @@
           type="number"
           v-model.number="trueFalseCount"
           min="0"
-          :disabled="isInfiniteMode"
           class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
           placeholder="请输入判断题数量"
         />
@@ -100,17 +99,12 @@ const router = useRouter();
  * @returns {Promise<void>}
  */
 async function startQuizHandler(): Promise<void> {
-  let totalQuestions = 0;
-  if (isInfiniteMode.value) {
-    totalQuestions = 10; // Infinite mode starts with 10 questions
-  } else {
-    totalQuestions = fillInTheBlankCount.value + trueFalseCount.value;
-  }
+  const totalQuestions = fillInTheBlankCount.value + trueFalseCount.value;
 
   if (totalQuestions > 0) {
     await quizStore.loadQuestions({
-      fillInTheBlank: isInfiniteMode.value ? 5 : fillInTheBlankCount.value,
-      trueFalse: isInfiniteMode.value ? 5 : trueFalseCount.value,
+      fillInTheBlank: fillInTheBlankCount.value,
+      trueFalse: trueFalseCount.value,
       isInfiniteMode: isInfiniteMode.value,
       questionsToAdd: questionsToAddCount.value, // Pass the new value
     });
