@@ -38,6 +38,7 @@
           <template v-for="(part, index) in parsedFillInTheBlanksQuestion" :key="index">
             <span v-if="part.type === 'text'">{{ part.value }}</span>
             <input v-else type="text" v-model="fillInTheBlanksUserAnswers[part.index!]" :disabled="quizStore.showAnswer"
+              :ref="(el) => { if (el) fillInTheBlanksInputs[part.index!] = el as HTMLInputElement }"
               :size="expectedFillInTheBlanksAnswerLengths[part.index!] || 10"
               class="inline-block min-w-[80px] max-w-full shadow-inner appearance-none border border-gray-300 rounded-lg py-2 px-3 text-gray-800 leading-tight focus:ring-2 focus:ring-blue-500 transition-all duration-200 align-middle"
               placeholder="填写" />
@@ -99,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuizStore } from '../stores/quiz';
 import type { TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question.d';
@@ -129,7 +130,28 @@ onMounted(() => {
   if (quizStore.currentQuestion) {
     console.log('Current question type:', quizStore.currentQuestion.type);
   }
+  window.addEventListener('keydown', handleKeyPress);
 });
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyPress);
+});
+
+/**
+ * @function handleKeyPress
+ * @description 处理键盘按键事件，实现回车提交答案或进入下一题。
+ * @param {KeyboardEvent} event - 键盘事件对象。
+ * @returns {void}
+ */
+function handleKeyPress(event: KeyboardEvent): void {
+  if (event.key === 'Enter') {
+    if (quizStore.showAnswer) {
+      nextQuestionHandler();
+    } else {
+      submitAnswerHandler();
+    }
+  }
+}
 
 /**
  * @computed {boolean} canSubmitAnswer - 判断是否可以提交答案。
@@ -313,8 +335,10 @@ async function resetAndGoHome(): Promise<void> {
   await router.push({ name: 'Home' });
 }
 
+const fillInTheBlanksInputs = ref<(HTMLInputElement | null)[]>([]);
+
 // 监听当前题目变化，重置用户答案并初始化填空题答案数组
-watch(() => quizStore.currentQuestion, (newQuestion) => {
+watch(() => quizStore.currentQuestion, async (newQuestion) => {
   userAnswer.value = null;
   fillInTheBlanksUserAnswers.value = []; // Reset for all types
   quizStore.setRetrying(false); // Reset retry state when question changes
@@ -322,6 +346,11 @@ watch(() => quizStore.currentQuestion, (newQuestion) => {
   if (newQuestion?.type === '填空题') {
     const blanksCount = (newQuestion.question.match(/__/g) || []).length;
     fillInTheBlanksUserAnswers.value = Array(blanksCount).fill('');
+    await nextTick();
+    const firstInput = fillInTheBlanksInputs.value[0];
+    if (firstInput) {
+      firstInput.focus();
+    }
   }
 });
 </script>
