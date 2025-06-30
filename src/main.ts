@@ -13,7 +13,8 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'Home', component: () => import('./components/Home.vue') },
     { path: '/quiz/:count', name: 'Quiz', component: () => import('./components/Quiz.vue') },
-    { path: '/statistics', name: 'Statistics', component: () => import('./components/Statistics.vue') }
+    { path: '/statistics', name: 'Statistics', component: () => import('./components/Statistics.vue') },
+    { path: '/question-stats-list', name: 'QuestionStatsList', component: () => import('./components/QuestionStatsList.vue') }
   ]
 });
 

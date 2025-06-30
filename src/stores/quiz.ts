@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Question, TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question.d';
+import { useStatisticsStore } from './statistics';
 
 /**
  * @constant {object} QuestionType
@@ -207,6 +208,10 @@ export const useQuizStore = defineStore('quiz', () => {
     if (isCorrect && !isRetryAttempt) {
       correctAnswersCount.value++;
     }
+
+    // Update question statistics
+    const statisticsStore = useStatisticsStore();
+    statisticsStore.updateQuestionStats(question.question, isCorrect);
   }
 
   /**

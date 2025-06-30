@@ -106,6 +106,25 @@ export interface ShortAnswerQuestion {
 }
 
 /**
+ * @interface QuestionStatistics
+ * @description 题目统计接口。
+ */
+export interface QuestionStatistics {
+  /**
+   * @property {string} question - 题目内容，作为唯一标识。
+   */
+  question: string;
+  /**
+   * @property {number} attempts - 答题次数。
+   */
+  attempts: number;
+  /**
+   * @property {number} incorrectAttempts - 错误次数。
+   */
+  incorrectAttempts: number;
+}
+
+/**
  * @typedef {TrueFalseQuestion | FillInTheBlanksQuestion | SingleChoiceQuestion | MultipleChoiceQuestion | ShortAnswerQuestion} Question
  * @description 所有题目类型的联合类型。
  */

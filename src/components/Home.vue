@@ -54,6 +54,12 @@
       >
         开始测验
       </button>
+      <button
+        @click="goToQuestionStatsList"
+        class="mt-4 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 w-full transform transition-all duration-200 active:scale-95"
+      >
+        查看题目统计
+      </button>
     </div>
   </div>
 </template>
@@ -111,6 +117,15 @@ async function startQuizHandler(): Promise<void> {
     quizStore.startQuiz();
     await router.push({ name: 'Quiz', params: { count: totalQuestions.toString() } });
   }
+}
+
+/**
+ * @function goToQuestionStatsList
+ * @description 跳转到题目统计列表页面。
+ * @returns {Promise<void>}
+ */
+async function goToQuestionStatsList(): Promise<void> {
+  await router.push({ name: 'QuestionStatsList' });
 }
 </script>
 
