@@ -3,10 +3,6 @@ import { ref, computed } from 'vue';
 import type { Question, TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question.d';
 import { useStatisticsStore } from './statistics';
 
-/**
- * @constant {object} QuestionType
- * @description 题目类型常量。
- */
 const QuestionType = {
   TrueFalse: '判断题',
   FillInTheBlanks: '填空题',
@@ -15,13 +11,12 @@ const QuestionType = {
   ShortAnswer: '简答题',
 } as const;
 
-/**
- * @function useQuizStore
- * @description 定义并返回 Quiz Store。
- * @returns {object} Quiz Store 实例。
- */
+const MASTERY_THRESHOLD = 3; // Consecutive correct answers to master a question
+const SUCCESS_RATE_THRESHOLD = 90; // Percentage to trigger question pool update
+
 export const useQuizStore = defineStore('quiz', () => {
-  const questions = ref<Question[]>([]);
+  // --- State ---
+  const questions = ref<Question[]>([]); // Current pool of questions for the round
   const currentQuestionIndex = ref<number>(0);
   const correctAnswersCount = ref<number>(0);
   const quizStarted = ref<boolean>(false);
@@ -30,139 +25,85 @@ export const useQuizStore = defineStore('quiz', () => {
   const showAnswer = ref<boolean>(false);
   const isRetrying = ref<boolean>(false);
   const isInfiniteMode = ref<boolean>(false);
+
+  // All questions loaded from JSON
   const allAvailableQuestions = ref<Question[]>([]);
-  const questionsAddedCount = ref<number>(0);
-  const questionsToAddPerRound = ref<number>(2); // New state variable
+  // Question types selected by the user
   const allowedQuestionTypes = ref<string[]>([]);
 
-  /**
-   * @computed {Question | undefined} currentQuestion - 返回当前题目对象。
-   */
-  const currentQuestion = computed<Question | undefined>(() => {
-    return questions.value[currentQuestionIndex.value];
-  });
+  // Infinite mode settings
+  const questionsToAddOnSuccess = ref<number>(5);
+  const maxQuestionsInPool = ref<number>(20);
 
-  /**
-   * @computed {number} totalQuestions - 返回题目总数。
-   */
-  const totalQuestions = computed<number>(() => {
-    return questions.value.length;
-  });
 
-  /**
-   * @computed {number} percentageCorrect - 返回正确率。
-   */
+  // --- Computed ---
+  const currentQuestion = computed<Question | undefined>(() => questions.value[currentQuestionIndex.value]);
+  const totalQuestions = computed<number>(() => questions.value.length);
   const percentageCorrect = computed<number>(() => {
-    if (totalQuestions.value === 0) {
-      return 0;
+    // In a round, percentage is based on questions answered in that round
+    const answeredQuestions = currentQuestionIndex.value + (showAnswer.value ? 1 : 0);
+    if (answeredQuestions === 0) return 0;
+    // When quiz is finished (end of round), calculate based on all questions in the round
+    if (currentQuestionIndex.value === questions.value.length -1 && showAnswer.value) {
+        return (correctAnswersCount.value / questions.value.length) * 100;
     }
-    return (correctAnswersCount.value / totalQuestions.value) * 100;
+    // During the round, calculate based on answered questions
+    return (correctAnswersCount.value / answeredQuestions) * 100;
   });
 
+
+  // --- Actions ---
+
   /**
-   * @function loadQuestions
-   * @description 从 JSON 文件加载指定数量的题目。
-   * @param {number} questionCount - 要加载的题目数量。
-   * @returns {Promise<void>}
+   * Loads questions from JSON files and initializes the quiz.
    */
-  async function loadQuestions(counts: { fillInTheBlank: number; trueFalse: number; isInfiniteMode?: boolean; questionsToAdd?: number }): Promise<void> {
+  async function loadQuestions(
+    counts: {
+      fillInTheBlank: number;
+      trueFalse: number;
+      isInfiniteMode?: boolean;
+      questionsToAdd?: number;
+      maxQuestions?: number;
+    }
+  ): Promise<void> {
     try {
-      const trueFalseQuestionsModule = await import('../assets/question/判断题.json');
-      const fillInTheBlanksQuestionsModule = await import('../assets/question/填空题.json');
+      const trueFalseModule = await import('../assets/question/判断题.json');
+      const fillInBlanksModule = await import('../assets/question/填空题.json');
 
-      const trueFalseQuestions: TrueFalseQuestion[] = trueFalseQuestionsModule.default.map((q: Omit<TrueFalseQuestion, 'type'>) => ({ ...q, type: QuestionType.TrueFalse }));
-      const fillInTheBlanksQuestions: FillInTheBlanksQuestion[] = fillInTheBlanksQuestionsModule.default.map((q: Omit<FillInTheBlanksQuestion, 'type'>) => ({ ...q, type: QuestionType.FillInTheBlanks }));
+      const trueFalseQs: TrueFalseQuestion[] = trueFalseModule.default.map((q: Omit<TrueFalseQuestion, 'type'>) => ({ ...q, type: QuestionType.TrueFalse }));
+      const fillInBlanksQs: FillInTheBlanksQuestion[] = fillInBlanksModule.default.map((q: Omit<FillInTheBlanksQuestion, 'type'>) => ({ ...q, type: QuestionType.FillInTheBlanks }));
 
-      allAvailableQuestions.value = [
-        ...trueFalseQuestions.map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse })),
-        ...fillInTheBlanksQuestions.map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks })),
-      ];
-
+      allAvailableQuestions.value = [...trueFalseQs, ...fillInBlanksQs];
       isInfiniteMode.value = counts.isInfiniteMode ?? false;
-      if (counts.isInfiniteMode) {
-        questionsToAddPerRound.value = counts.questionsToAdd || 2; // Set the new state variable
-      }
 
-      const selectedQuestions: Question[] = [];
+      allowedQuestionTypes.value = [];
+      if (counts.trueFalse > 0) allowedQuestionTypes.value.push(QuestionType.TrueFalse);
+      if (counts.fillInTheBlank > 0) allowedQuestionTypes.value.push(QuestionType.FillInTheBlanks);
 
-      // Load specified number of true/false questions
+      let initialQuestions: Question[] = [];
       if (counts.trueFalse > 0) {
-        const shuffledTrueFalse = trueFalseQuestions.sort(() => Math.random() - 0.5);
-        selectedQuestions.push(
-          ...shuffledTrueFalse.slice(0, counts.trueFalse).map((q: TrueFalseQuestion) => ({ ...q, type: QuestionType.TrueFalse }))
-        );
+        initialQuestions.push(...trueFalseQs.sort(() => Math.random() - 0.5).slice(0, counts.trueFalse));
       }
-
-      // Load specified number of fill-in-the-blanks questions
       if (counts.fillInTheBlank > 0) {
-        const shuffledFillInTheBlanks = fillInTheBlanksQuestions.sort(() => Math.random() - 0.5);
-        selectedQuestions.push(
-          ...shuffledFillInTheBlanks.slice(0, counts.fillInTheBlank).map((q: FillInTheBlanksQuestion) => ({ ...q, type: QuestionType.FillInTheBlanks }))
-        );
+        initialQuestions.push(...fillInBlanksQs.sort(() => Math.random() - 0.5).slice(0, counts.fillInTheBlank));
       }
+      questions.value = initialQuestions.sort(() => Math.random() - 0.5);
 
-      // Shuffle all selected questions
-      questions.value = selectedQuestions.sort(() => Math.random() - 0.5);
-      questionsAddedCount.value = questions.value.length;
-
-      // Set allowed question types for infinite mode
       if (isInfiniteMode.value) {
-        allowedQuestionTypes.value = [];
-        if (counts.trueFalse > 0) {
-          allowedQuestionTypes.value.push(QuestionType.TrueFalse);
-        }
-        if (counts.fillInTheBlank > 0) {
-          allowedQuestionTypes.value.push(QuestionType.FillInTheBlanks);
-        }
+        questionsToAddOnSuccess.value = counts.questionsToAdd ?? 5;
+        maxQuestionsInPool.value = counts.maxQuestions ?? 20;
       }
 
-      // Fallback if not enough questions are loaded
       if (questions.value.length === 0 && (counts.trueFalse > 0 || counts.fillInTheBlank > 0)) {
-        console.warn('Not enough questions loaded. Generating dummy questions.');
-        if (counts.trueFalse > 0) {
-          questions.value.push({
-            question: `Dummy True/False Question 1?`,
-            answer: true,
-            type: QuestionType.TrueFalse,
-          });
-        }
-        if (counts.fillInTheBlank > 0) {
-          questions.value.push({
-            question: `Dummy Fill-in-the-Blanks Question 1: __ and __`,
-            answer: [`answer1a`, `answer1b`],
-            type: QuestionType.FillInTheBlanks,
-          });
-        }
-        questions.value = questions.value.sort(() => Math.random() - 0.5);
-        questionsAddedCount.value = questions.value.length;
-      }
-      console.log('Loaded questions:', questions.value);
-      if (questions.value.length > 0) {
-        console.log('First question type:', questions.value[0].type);
+        console.warn('Not enough questions to start.');
       }
     } catch (error) {
       console.error('Failed to load questions:', error);
-      // Fallback for load error
-      questions.value = [
-        {
-          question: 'Error loading questions. Dummy True/False Question 1?',
-          answer: true,
-          type: QuestionType.TrueFalse,
-        },
-        {
-          question: 'Error loading questions. Dummy Fill-in-the-Blanks Question 1: __ and __',
-          answer: ['dummy1', 'dummy2'],
-          type: QuestionType.FillInTheBlanks,
-        },
-      ];
-      console.log('Loaded dummy questions due to error:', questions.value);
     }
   }
 
   /**
-   * @function startQuiz
-   * @description 开始测验。
-   * @returns {void}
+   * Starts the quiz, resetting round-specific state.
    */
   function startQuiz(): void {
     quizStarted.value = true;
@@ -174,112 +115,131 @@ export const useQuizStore = defineStore('quiz', () => {
   }
 
   /**
-   * @function submitAnswer
-   * @description 提交答案，检查对错，更新分数，并显示正确答案。
-   * @param {string | boolean | string[]} answer - 用户提交的答案。
-   * @returns {void}
+   * Submits the user's answer and updates statistics.
    */
   function submitAnswer(answer: string | boolean | string[], isRetryAttempt: boolean = false): void {
     userAnswer.value = answer;
     showAnswer.value = true;
-
     const question = currentQuestion.value;
-    if (!question) {
-      return;
-    }
+    if (!question) return;
 
     let isCorrect = false;
-    if ('answer' in question) {
-      if (question.type === QuestionType.TrueFalse) {
-        isCorrect = (answer === question.answer);
-      } else if (question.type === QuestionType.FillInTheBlanks) {
-        // 填空题答案可能包含多个，用空格分隔
-        const correctAnswers = (question.answer as string[]).map(a => a.trim().toLowerCase());
-        const userAnswers = (answer as string[]).map(a => a.trim().toLowerCase());
-        // 严格按照顺序匹配
-        if (correctAnswers.length !== userAnswers.length) {
-          isCorrect = false;
-        } else {
-          isCorrect = correctAnswers.every((ca, index) => ca === userAnswers[index]);
-        }
-      }
+    if (question.type === QuestionType.TrueFalse) {
+      isCorrect = (answer === question.answer);
+    } else if (question.type === QuestionType.FillInTheBlanks) {
+      const correctAnswers = (question.answer as string[]).map(a => a.trim().toLowerCase());
+      const userAnswers = (answer as string[]).map(a => a.trim().toLowerCase());
+      isCorrect = correctAnswers.length === userAnswers.length && correctAnswers.every((ca, index) => ca === userAnswers[index]);
     }
 
     if (isCorrect && !isRetryAttempt) {
       correctAnswersCount.value++;
     }
-
-    // Update question statistics
     const statisticsStore = useStatisticsStore();
     statisticsStore.updateQuestionStats(question.question, isCorrect);
   }
 
   /**
-   * @function nextQuestion
-   * @description 切换到下一题。
-   * @returns {void}
+   * Moves to the next question or, if the round is over, updates the question pool.
    */
   function nextQuestion(): void {
-    console.log('nextQuestion called');
     showAnswer.value = false;
     userAnswer.value = null;
-    isRetrying.value = false; // Reset retry state
-    if (currentQuestionIndex.value < questions.value.length - 1) {
-      currentQuestionIndex.value++;
-      console.log('currentQuestionIndex:', currentQuestionIndex.value);
-    } else {
+    isRetrying.value = false;
+
+    // Check if it's the end of the round
+    if (currentQuestionIndex.value >= questions.value.length - 1) {
       if (isInfiniteMode.value) {
-        // Check accuracy and add new questions if needed
-        if (percentageCorrect.value >= 90) {
-          addNewQuestions(questionsToAddPerRound.value); // Use the stored value
+        // Calculate final accuracy for the round
+        const finalAccuracy = (correctAnswersCount.value / questions.value.length) * 100;
+
+        if (finalAccuracy >= SUCCESS_RATE_THRESHOLD) {
+          updateQuestionPool();
         }
-        // Reset for the next loop
+        // If accuracy is low, the same pool will be repeated.
+        
+        // Reset for the next round (with either the same or new pool)
         currentQuestionIndex.value = 0;
         correctAnswersCount.value = 0;
-        quizFinished.value = false; // Ensure quiz is not marked as finished
-        // Shuffle questions for the next round
-        questions.value = questions.value.sort(() => Math.random() - 0.5);
+        questions.value.sort(() => Math.random() - 0.5); // Shuffle for the next round
+
+        if (questions.value.length === 0) {
+          quizFinished.value = true; // End quiz if the pool becomes empty
+        }
       } else {
         quizFinished.value = true;
       }
-      console.log('quizFinished:', quizFinished.value);
-    }
-  }
-
-  /**
-   * @function addNewQuestions
-   * @description 在无限循环模式下，根据正确率增加新题目。
-   * @param {number} count - 要增加的题目数量。
-   * @returns {void}
-   */
-  function addNewQuestions(count: number): void {
-    const currentQuestionIds = new Set(questions.value.map((q: Question) => q.question));
-    const newQuestionsToAdd: Question[] = [];
-
-    // Filter out questions already in the current quiz and of allowed types, then shuffle
-    const availableNewQuestions = allAvailableQuestions.value.filter(
-      (q: Question) => 
-        !currentQuestionIds.has(q.question) && 
-        allowedQuestionTypes.value.includes(q.type)
-    ).sort(() => Math.random() - 0.5);
-
-    for (let i = 0; i < count && i < availableNewQuestions.length; i++) {
-      newQuestionsToAdd.push(availableNewQuestions[i]);
-    }
-
-    if (newQuestionsToAdd.length > 0) {
-      questions.value.push(...newQuestionsToAdd);
-      questionsAddedCount.value += newQuestionsToAdd.length;
-      console.log(`Added ${newQuestionsToAdd.length} new questions. Total questions: ${questions.value.length}`);
     } else {
-      console.log('No new questions to add.');
+      currentQuestionIndex.value++;
     }
   }
 
   /**
-   * @function resetQuiz
-   * @description 重置测验状态。
-   * @returns {void}
+   * Updates the question pool for infinite mode based on performance.
+   */
+  function updateQuestionPool(): void {
+    const statisticsStore = useStatisticsStore();
+    const statsMap = statisticsStore.questionStats;
+
+    // 1. Remove mastered questions from the current pool
+    const masteredQuestions = new Set();
+    const remainingInPool = questions.value.filter(q => {
+        const stats = statsMap.get(q.question);
+        if (stats && stats.consecutiveCorrectAttempts >= MASTERY_THRESHOLD) {
+            masteredQuestions.add(q.question);
+            return false; // Remove from pool
+        }
+        return true; // Keep in pool
+    });
+    
+    const numRemoved = masteredQuestions.size;
+    const numToAdd = numRemoved + questionsToAddOnSuccess.value;
+    const potentialPoolSize = remainingInPool.length + numToAdd;
+    const finalNumToAdd = potentialPoolSize > maxQuestionsInPool.value
+        ? maxQuestionsInPool.value - remainingInPool.length
+        : numToAdd;
+
+    if (finalNumToAdd <= 0) {
+        questions.value = remainingInPool;
+        return;
+    }
+
+    // 2. Find new candidate questions
+    // Candidates are questions of allowed types, not currently in the pool, and not mastered.
+    const candidateQuestions = allAvailableQuestions.value.filter(q => {
+        if (!allowedQuestionTypes.value.includes(q.type)) return false;
+        if (remainingInPool.some(poolQ => poolQ.question === q.question)) return false;
+        const stats = statsMap.get(q.question);
+        return !stats || stats.consecutiveCorrectAttempts < MASTERY_THRESHOLD;
+    });
+
+    // 3. Prioritize candidates: unseen first, then incorrect
+    const unseen = candidateQuestions.filter(q => !statsMap.has(q.question));
+    const incorrect = candidateQuestions.filter(q => {
+        const stats = statsMap.get(q.question);
+        return stats && stats.incorrectAttempts > 0;
+    });
+    incorrect.sort((a, b) => {
+        const statsA = statsMap.get(a.question)!;
+        const statsB = statsMap.get(b.question)!;
+        return statsB.incorrectAttempts - statsA.incorrectAttempts;
+    });
+
+    // Get other candidates that are neither unseen nor incorrect, but not yet mastered
+    const otherCandidates = candidateQuestions.filter(
+        q => !unseen.some(uq => uq.question === q.question) && !incorrect.some(iq => iq.question === q.question)
+    );
+
+    const prioritizedCandidates = [...unseen, ...incorrect, ...otherCandidates.sort(() => Math.random() - 0.5)];
+    const newQuestions = prioritizedCandidates.slice(0, finalNumToAdd);
+
+    // 4. Update the main question pool
+    questions.value = [...remainingInPool, ...newQuestions];
+  }
+
+
+  /**
+   * Resets the entire quiz state to its initial values.
    */
   function resetQuiz(): void {
     questions.value = [];
@@ -289,24 +249,23 @@ export const useQuizStore = defineStore('quiz', () => {
     quizFinished.value = false;
     userAnswer.value = null;
     showAnswer.value = false;
-    isRetrying.value = false; // Reset retry state
+    isRetrying.value = false;
     isInfiniteMode.value = false;
     allAvailableQuestions.value = [];
-    questionsAddedCount.value = 0;
     allowedQuestionTypes.value = [];
+    questionsToAddOnSuccess.value = 5;
+    maxQuestionsInPool.value = 20;
   }
 
   /**
-   * @function setRetrying
-   * @description 设置是否处于重试状态。
-   * @param {boolean} value - 是否重试。
-   * @returns {void}
+   * Sets the retry state for the current question.
    */
   function setRetrying(value: boolean): void {
     isRetrying.value = value;
   }
 
   return {
+    // State
     questions,
     currentQuestionIndex,
     correctAnswersCount,
@@ -316,16 +275,23 @@ export const useQuizStore = defineStore('quiz', () => {
     showAnswer,
     isRetrying,
     isInfiniteMode,
+    allowedQuestionTypes,
+    questionsToAddOnSuccess,
+    maxQuestionsInPool,
+
+    // Computed
     currentQuestion,
     totalQuestions,
     percentageCorrect,
+
+    // Actions
     loadQuestions,
     startQuiz,
     submitAnswer,
     nextQuestion,
     resetQuiz,
     setRetrying,
-    questionsToAddPerRound,
-    allowedQuestionTypes,
   };
 });
+''
+''

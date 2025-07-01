@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import type { QuestionStatistics } from '../types/question.d';
 
 /**
@@ -28,8 +28,14 @@ export const useStatisticsStore = defineStore('statistics', () => {
       const storedStats = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedStats) {
         const parsedStats = JSON.parse(storedStats);
-        // 将解析后的对象转换为 Map
-        questionStats.value = new Map(parsedStats.map((item: QuestionStatistics) => [item.question, item]));
+        const validStats = parsedStats.map((item: any) => ({
+          ...item,
+          attempts: Number(item.attempts) || 0,
+          incorrectAttempts: Number(item.incorrectAttempts) || 0,
+          correctAttempts: Number(item.correctAttempts) || 0,
+          consecutiveCorrectAttempts: Number(item.consecutiveCorrectAttempts) || 0,
+        }));
+        questionStats.value = new Map(validStats.map((item: QuestionStatistics) => [item.question, item]));
       }
     } catch (error) {
       console.error('Failed to load statistics from localStorage:', error);
@@ -65,12 +71,18 @@ export const useStatisticsStore = defineStore('statistics', () => {
         question: questionContent,
         attempts: 0,
         incorrectAttempts: 0,
+        correctAttempts: 0,
+        consecutiveCorrectAttempts: 0,
       };
     }
 
     stats.attempts++;
-    if (!isCorrect) {
+    if (isCorrect) {
+      stats.correctAttempts++;
+      stats.consecutiveCorrectAttempts++;
+    } else {
       stats.incorrectAttempts++;
+      stats.consecutiveCorrectAttempts = 0; // 如果答错，则重置连续答对次数
     }
 
     questionStats.value.set(questionContent, stats);
@@ -86,6 +98,16 @@ export const useStatisticsStore = defineStore('statistics', () => {
     return Array.from(questionStats.value.values());
   }
 
+  const MASTERY_THRESHOLD = 3; // This should be consistent with quiz.ts
+
+  const masteredQuestionsCount = computed(() => {
+    return Array.from(questionStats.value.values()).filter(stats => stats.consecutiveCorrectAttempts >= MASTERY_THRESHOLD).length;
+  });
+
+  const incorrectQuestionsCount = computed(() => {
+    return Array.from(questionStats.value.values()).filter(stats => stats.incorrectAttempts > 0).length;
+  });
+
   // 在 store 初始化时加载统计数据
   loadStatistics();
 
@@ -95,5 +117,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
     saveStatistics,
     updateQuestionStats,
     getQuestionStatistics,
+    masteredQuestionsCount,
+    incorrectQuestionsCount,
   };
 });

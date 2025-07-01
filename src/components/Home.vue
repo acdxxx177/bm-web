@@ -48,6 +48,18 @@
           placeholder="请输入每次增加的题目数量"
         />
       </div>
+
+      <div v-if="isInfiniteMode" class="mb-8">
+        <label for="max-questions-in-pool" class="block text-gray-800 text-lg font-semibold mb-3">题池最大容量:</label>
+        <input
+          id="max-questions-in-pool"
+          type="number"
+          v-model.number="maxQuestionsInPool"
+          min="1"
+          class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          placeholder="请输入题池最大容量"
+        />
+      </div>
       <button
         @click="startQuizHandler"
         class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full transform transition-all duration-200 active:scale-95"
@@ -90,6 +102,11 @@ const isInfiniteMode = ref<boolean>(false);
 const questionsToAddCount = ref<number>(2);
 
 /**
+ * @property {number} maxQuestionsInPool - 无限循环模式下题池的最大容量。
+ */
+const maxQuestionsInPool = ref<number>(20);
+
+/**
  * @property {object} quizStore - Quiz Store 实例。
  */
 const quizStore = useQuizStore();
@@ -112,7 +129,8 @@ async function startQuizHandler(): Promise<void> {
       fillInTheBlank: fillInTheBlankCount.value,
       trueFalse: trueFalseCount.value,
       isInfiniteMode: isInfiniteMode.value,
-      questionsToAdd: questionsToAddCount.value, // Pass the new value
+      questionsToAdd: questionsToAddCount.value,
+      maxQuestions: maxQuestionsInPool.value, // Pass the new value
     });
     quizStore.startQuiz();
     await router.push({ name: 'Quiz', params: { count: totalQuestions.toString() } });

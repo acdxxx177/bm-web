@@ -1,6 +1,12 @@
 <template>
   <div
     class="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-4 sm:p-6 lg:p-8">
+    <!-- Global Stats Display -->
+    <div v-if="quizStore.quizStarted && !quizStore.quizFinished" class="fixed top-6 left-6 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg text-sm z-10">
+      <p class="font-semibold text-green-600">已掌握: {{ statisticsStore.masteredQuestionsCount }}</p>
+      <p class="font-semibold text-red-600 mt-1">出错过: {{ statisticsStore.incorrectQuestionsCount }}</p>
+    </div>
+
     <div v-if="quizStore.quizStarted && !quizStore.quizFinished"
       class="bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-3xl transform transition-all duration-300 hover:scale-[1.01]">
       <div v-if="quizStore.isInfiniteMode"
@@ -103,12 +109,18 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuizStore } from '../stores/quiz';
+import { useStatisticsStore } from '../stores/statistics';
 import type { TrueFalseQuestion, FillInTheBlanksQuestion } from '../types/question.d';
 
 /**
  * @property {object} quizStore - Quiz Store 实例。
  */
 const quizStore = useQuizStore();
+
+/**
+ * @property {object} statisticsStore - Statistics Store 实例。
+ */
+const statisticsStore = useStatisticsStore();
 
 /**
  * @property {object} router - Vue Router 实例。

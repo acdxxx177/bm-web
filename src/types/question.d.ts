@@ -122,6 +122,14 @@ export interface QuestionStatistics {
    * @property {number} incorrectAttempts - 错误次数。
    */
   incorrectAttempts: number;
+  /**
+   * @property {number} correctAttempts - 正确次数。
+   */
+  correctAttempts: number;
+  /**
+   * @property {number} consecutiveCorrectAttempts - 连续正确次数。
+   */
+  consecutiveCorrectAttempts: number;
 }
 
 /**
