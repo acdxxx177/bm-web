@@ -67,6 +67,10 @@
               class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95">
               再试一次
             </button>
+            <button type="button" v-if="quizStore.showAnswer && statisticsStore.questionStats.get(quizStore.currentQuestion?.question || '')?.incorrectAttempts > 0" @click="removeQuestionFromIncorrectList"
+              class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95">
+              移除错题
+            </button>
             <button @click="nextQuestionHandler"
               class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-1/2 transform transition-all duration-200 active:scale-95"
               :class="{ 'sm:w-full': isAnswerCorrect }">
@@ -370,6 +374,19 @@ async function goToStatistics(): Promise<void> {
 async function resetAndGoHome(): Promise<void> {
   quizStore.resetQuiz();
   await router.push({ name: 'Home' });
+}
+
+/**
+ * @function removeQuestionFromIncorrectList
+ * @description 将当前题目从错题列表中移除。
+ * @returns {void}
+ */
+function removeQuestionFromIncorrectList(): void {
+  if (quizStore.currentQuestion) {
+    statisticsStore.markQuestionAsMastered(quizStore.currentQuestion.question);
+    // Optionally, move to the next question after removing from incorrect list
+    nextQuestionHandler();
+  }
 }
 
 const retryButton = ref<HTMLButtonElement | null>(null);

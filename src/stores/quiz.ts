@@ -103,6 +103,37 @@ export const useQuizStore = defineStore('quiz', () => {
   }
 
   /**
+   * Loads only the questions that have been answered incorrectly.
+   */
+  async function loadIncorrectQuestions(): Promise<void> {
+    try {
+      const statisticsStore = useStatisticsStore();
+      const incorrectQuestionsStats = statisticsStore.getQuestionStatistics().filter(stat => stat.incorrectAttempts > 0);
+      const incorrectQuestionContents = new Set(incorrectQuestionsStats.map(stat => stat.question));
+
+      if (allAvailableQuestions.value.length === 0) {
+        const trueFalseModule = await import('../assets/question/判断题.json');
+        const fillInBlanksModule = await import('../assets/question/填空题.json');
+        const trueFalseQs: TrueFalseQuestion[] = trueFalseModule.default.map((q: Omit<TrueFalseQuestion, 'type'>) => ({ ...q, type: QuestionType.TrueFalse }));
+        const fillInBlanksQs: FillInTheBlanksQuestion[] = fillInBlanksModule.default.map((q: Omit<FillInTheBlanksQuestion, 'type'>) => ({ ...q, type: QuestionType.FillInTheBlanks }));
+        allAvailableQuestions.value = [...trueFalseQs, ...fillInBlanksQs];
+      }
+
+      const incorrectQuestions = allAvailableQuestions.value.filter(q => incorrectQuestionContents.has(q.question));
+      
+      questions.value = incorrectQuestions.sort(() => Math.random() - 0.5);
+      isInfiniteMode.value = false; // 错题训练通常不是无限模式
+
+      if (questions.value.length === 0) {
+        console.warn('No incorrect questions to practice.');
+        // Optionally, handle this case in the UI
+      }
+    } catch (error) {
+      console.error('Failed to load incorrect questions:', error);
+    }
+  }""
+
+  /**
    * Starts the quiz, resetting round-specific state.
    */
   function startQuiz(): void {
@@ -286,6 +317,7 @@ export const useQuizStore = defineStore('quiz', () => {
 
     // Actions
     loadQuestions,
+    loadIncorrectQuestions,
     startQuiz,
     submitAnswer,
     nextQuestion,

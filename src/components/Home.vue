@@ -72,6 +72,12 @@
       >
         查看题目统计
       </button>
+      <button
+        @click="startIncorrectQuizHandler"
+        class="mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 w-full transform transition-all duration-200 active:scale-95"
+      >
+        错题训练
+      </button>
     </div>
   </div>
 </template>
@@ -144,6 +150,21 @@ async function startQuizHandler(): Promise<void> {
  */
 async function goToQuestionStatsList(): Promise<void> {
   await router.push({ name: 'QuestionStatsList' });
+}
+
+/**
+ * @function startIncorrectQuizHandler
+ * @description 处理开始错题训练按钮点击事件。
+ * @returns {Promise<void>}
+ */
+async function startIncorrectQuizHandler(): Promise<void> {
+  await quizStore.loadIncorrectQuestions();
+  if (quizStore.totalQuestions > 0) {
+    quizStore.startQuiz();
+    await router.push({ name: 'Quiz', params: { count: quizStore.totalQuestions.toString() } });
+  } else {
+    alert('暂无错题可供训练！');
+  }
 }
 </script>
 

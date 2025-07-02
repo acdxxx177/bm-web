@@ -90,6 +90,22 @@ export const useStatisticsStore = defineStore('statistics', () => {
   }
 
   /**
+   * @function markQuestionAsMastered
+   * @description 将指定题目标记为已掌握，重置其错误次数和连续答对次数。
+   * @param {string} questionContent - 题目内容，作为唯一标识。
+   * @returns {void}
+   */
+  function markQuestionAsMastered(questionContent: string): void {
+    let stats = questionStats.value.get(questionContent);
+    if (stats) {
+      stats.incorrectAttempts = 0;
+      stats.consecutiveCorrectAttempts = 0;
+      questionStats.value.set(questionContent, stats);
+      saveStatistics();
+    }
+  }
+
+  /**
    * @function getQuestionStatistics
    * @description 获取所有题目的统计数据列表。
    * @returns {QuestionStatistics[]} 所有题目的统计数据数组。
@@ -116,6 +132,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
     loadStatistics,
     saveStatistics,
     updateQuestionStats,
+    markQuestionAsMastered,
     getQuestionStatistics,
     masteredQuestionsCount,
     incorrectQuestionsCount,
